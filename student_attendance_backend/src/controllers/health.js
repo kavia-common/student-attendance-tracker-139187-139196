@@ -4,7 +4,10 @@ const { getRepository } = require('../services/db');
 class HealthController {
   // PUBLIC_INTERFACE
   check(req, res) {
-    /** Health check with DB connectivity status. */
+    /**
+     * Health check with DB connectivity status.
+     * Returns: { status, message, timestamp, environment, database: { mode, connected, error? } }
+     */
     const healthStatus = healthService.getStatus();
     try {
       const repo = getRepository();
