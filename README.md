@@ -34,4 +34,9 @@ Database:
 - If not, it runs with an in-memory store (for demo/development).
 
 Supabase:
-- See `student_attendance_backend/assets/supabase.md` for future integration notes.
+- See `student_attendance_backend/assets/supabase.md` for full integration steps.
+- Backend env:
+  - SUPABASE_URL, SUPABASE_SERVICE_KEY (server-side, never expose service key)
+  - SUPABASE_ANON_KEY (optional, mainly for frontend)
+- Required DB tables and RLS policies are documented in supabase.md.
+- In Supabase Dashboard, set Site URL and Redirect URLs for auth as described.

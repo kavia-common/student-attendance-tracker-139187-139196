@@ -11,6 +11,7 @@
     "openapi:generate": "node generate_openapi.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.44.4",
     "bcryptjs": "^2.4.3",
     "cors": "2.8.5",
     "dotenv": "^16.3.1",
