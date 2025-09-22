@@ -1,14 +1,15 @@
 const express = require('express');
 const healthController = require('../controllers/health');
+const swaggerSpec = require('../../swagger');
 
 const router = express.Router();
-// Health endpoint
 
 /**
  * @swagger
  * /:
  *   get:
  *     summary: Health endpoint
+ *     tags: [Health]
  *     responses:
  *       200:
  *         description: Service health check passed
@@ -31,5 +32,19 @@ const router = express.Router();
  *                   example: development
  */
 router.get('/', healthController.check.bind(healthController));
+
+/**
+ * @swagger
+ * /openapi.json:
+ *   get:
+ *     summary: OpenAPI specification
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: OpenAPI JSON
+ */
+router.get('/openapi.json', (req, res) => {
+  res.json(swaggerSpec);
+});
 
 module.exports = router;
