@@ -8,7 +8,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const server = app.listen(PORT, HOST, async () => {
   const repo = getRepository();
   const mode = repo.knex ? 'database' : 'in-memory';
-  console.log(`Server running at http://${HOST}:${PORT} (repo: ${mode})`);
+  console.log(`Server running at http://${HOST}:${PORT} (initial repo: ${mode}). If DB is configured, it may switch to database after init.`);
 });
 
 // Graceful shutdown

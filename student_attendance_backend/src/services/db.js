@@ -5,20 +5,45 @@
  */
 const knexFactory = require('knex');
 
+function parseBool(val, defaultValue = false) {
+  if (val === undefined || val === null) return defaultValue;
+  const s = String(val).trim().toLowerCase();
+  return s === 'true' || s === '1' || s === 'yes';
+}
+
+function validateDbEnv(env) {
+  const required = ['DB_CLIENT', 'DB_HOST', 'DB_NAME'];
+  const missing = required.filter((k) => !env[k] || String(env[k]).trim() === '');
+  return { ok: missing.length === 0, missing };
+}
+
 function getKnexConfigFromEnv() {
+  const { ok, missing } = validateDbEnv(process.env);
   const client = process.env.DB_CLIENT || null;
-  if (!client) return null;
-  const ssl = String(process.env.DB_SSL || 'false').toLowerCase() === 'true';
-  return {
-    client,
-    connection: {
+  if (!client || !ok) {
+    if (client && !ok) {
+      console.warn(`[db] DB_CLIENT set to ${client} but missing required vars: ${missing.join(', ')}. Falling back to in-memory store.`);
+    }
+    return null;
+  }
+  const ssl = parseBool(process.env.DB_SSL, false);
+  const connection = {};
+  // Support for single connection URL via DB_URL if provided
+  if (process.env.DB_URL && String(process.env.DB_URL).trim() !== '') {
+    connection.connection = process.env.DB_URL;
+  } else {
+    connection.connection = {
       host: process.env.DB_HOST,
       port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       ssl: ssl ? { rejectUnauthorized: false } : false,
-    },
+    };
+  }
+  return {
+    client,
+    ...connection,
     pool: { min: 0, max: 10 },
     migrations: { tableName: 'knex_migrations' },
   };
@@ -122,6 +147,14 @@ class KnexRepo extends InMemoryRepo {
     this.knex = knex;
   }
   async init() {
+    // Verify connection first with a lightweight query
+    try {
+      await this.knex.raw('select 1 as ok');
+    } catch (e) {
+      // Bubble up to caller to decide fallback
+      throw new Error(`Database connectivity failed: ${e.message}`);
+    }
+
     // Create tables if not exist (simple bootstrap)
     const hasStudents = await this.knex.schema.hasTable('students');
     if (!hasStudents) {
@@ -237,19 +270,44 @@ class KnexRepo extends InMemoryRepo {
 
 let repoInstance = null;
 
+/**
+ * Attempt to initialize the DB repository. If initialization fails,
+ * returns an InMemoryRepo and logs the error clearly.
+ */
+async function initializeRepository() {
+  const knexConfig = getKnexConfigFromEnv();
+  if (!knexConfig) {
+    return new InMemoryRepo();
+  }
+  const knex = knexFactory(knexConfig);
+  const repo = new KnexRepo(knex);
+  await repo.init(); // may throw on connection issues
+  return repo;
+}
+
 // PUBLIC_INTERFACE
 function getRepository() {
   /** Returns a repository instance. Uses DB if configured, otherwise in-memory. */
   if (repoInstance) return repoInstance;
-  const knexConfig = getKnexConfigFromEnv();
-  if (knexConfig) {
-    const knex = knexFactory(knexConfig);
-    repoInstance = new KnexRepo(knex);
-    repoInstance.init().catch((e) => {
-      console.error('DB init failed, falling back to in-memory:', e.message);
-      repoInstance = new InMemoryRepo();
-    });
-  } else {
+  try {
+    // Kick off async initialization; attach both then and catch to satisfy linting without extra plugins
+    initializeRepository()
+      .then((repo) => {
+        repoInstance = repo;
+        if (repo.knex) {
+          console.log('[db] Connected using Knex client:', process.env.DB_CLIENT);
+        } else {
+          console.log('[db] Using in-memory repository.');
+        }
+      })
+      .catch((e) => {
+        console.error('[db] Initialization error, using in-memory repository:', e.message);
+        repoInstance = new InMemoryRepo();
+      });
+    // Provide immediate fallback while async init resolves
+    repoInstance = new InMemoryRepo();
+  } catch (e) {
+    console.error('[db] Unexpected error during initialization:', e.message);
     repoInstance = new InMemoryRepo();
   }
   return repoInstance;

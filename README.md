@@ -32,6 +32,15 @@ Quickstart:
 Database:
 - If DB_* env vars are set, the app connects via Knex and auto-creates tables.
 - If not, it runs with an in-memory store (for demo/development).
+- You can configure DB either via a single DB_URL or discrete DB_* variables. See `student_attendance_backend/.env.example`.
+- On startup, the app logs whether it’s using in-memory or connected to the database. The health endpoint also reports DB status.
+
+Troubleshooting DB connection:
+- Ensure `DB_CLIENT` matches your driver (e.g., `pg` for Postgres, `mysql2` for MySQL).
+- If using Postgres over SSL (e.g., Supabase), set `DB_SSL=true` or use `?sslmode=require` in DB_URL.
+- Verify credentials and host reachability from the backend container.
+- Check `GET /` health endpoint for `{ database: { mode, connected } }`.
+- Review logs for messages prefixed with `[db]`.
 
 Supabase:
 - See `student_attendance_backend/assets/supabase.md` for full integration steps.

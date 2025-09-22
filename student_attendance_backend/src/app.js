@@ -59,8 +59,8 @@ app.use('/students', studentsRouter);
 app.use('/attendance', attendanceRouter);
 app.use('/reports', reportsRouter);
 
-// Error handling middleware
-// eslint-disable-next-line no-unused-vars
+/* Error handling middleware: Keep 4-arity signature for Express to treat it as error handler */
+/* eslint-disable no-unused-vars */
 app.use((err, req, res, next) => {
   // Centralized error handler
   const status = err.status || 500;
@@ -75,5 +75,6 @@ app.use((err, req, res, next) => {
     details,
   });
 });
+/* eslint-enable no-unused-vars */
 
 module.exports = app;
